@@ -180,5 +180,7 @@ dist/index.html 2.72 kB │ CSS 377.31 kB(gzip 64.16) │ JS: index 72.96 + dexi
 1. **不要每步改动都跑 `type-check`/ESLint**——功能验证以 `npm run dev` 编译通过 + 浏览器实际效果为准；静态校验留到提交前统一处理。
 2. **验证过程的临时产物不入仓库**（截图、临时脚本等）：先补 `.gitignore`，收尾时删除并用 `git status` 复核。
 3. 注释与 UI 文案使用中文；代码风格向周围文件看齐（无分号/单引号为主流，个别文件带分号，就地保持一致）。
-4. composables 是**模块级单例**：新增共享状态请沿用"ref 定义在模块顶层、函数在 composable 内"的既有模式，不要为了"规范"改成类或全局 store。
+4. composables 是**模块级单例**：新增共享状态请沿用“ref 定义在模块顶层、函数在 composable 内”的既有模式，不要为了“规范”改成类或全局 store。
 5. 改动 Dexie schema 必须**新增 version 并写 upgrade**，不能改旧 version（用户本地已有数据）。
+6. **UI 风格遵循 `prompt.xml` 的 Neumorphism（软 UI）设计系统**：双阴影塑形、不用边框、同表面材质、超圆润角；阴影必须用 rgba 透明度（禁止硬 hex 阴影）、卡片背景必须与页面背景同色（禁止 bg-white）、交互元素必须有可见 focus 态。避免通用化“AI 审美”：字体用有辨识度的组合（Plus Jakarta Sans / DM Sans），主导色 + 锐利点缀，动效克制而有物理感（300ms ease-out 微交互）。
+7. 文档入口：README.md 面向使用者；AGENTS.md 面向 AI/开发者；prompt.xml 是设计规范。

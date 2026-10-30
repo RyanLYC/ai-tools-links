@@ -1,192 +1,86 @@
-# 工具集 - 本地化网站管理平台
+# 工具集（AI Tools Links）
 
-一个纯前端的网站集合管理工具，支持本地数据存储、完整的CRUD操作、json数据格式的导入导出，可打包作为 Chrome 扩展使用。
+一个纯前端的**网站收藏夹 / AI 工具导航**：无需登录、无后端，所有数据存在浏览器 IndexedDB 中。支持一键直达网站、分类/标签筛选、APIKey 管理、JSON 导入导出与 GitHub Gist 加密同步，可打包为 Chrome 扩展使用。
 
 ## 功能特性
 
-### 核心功能
-- ✅ **网站管理**：完整的增删改查功能
-- ✅ **图片上传**：支持上传网站图标（存储到IndexedDB）
-- ✅ **APIKeys管理**：支持多个APIKeys，脱敏显示，一键复制
-- ✅ **分类系统**：支持自定义分类（带图标选择）
-- ✅ **标签系统**：支持自定义标签，多维度筛选
-- ✅ **搜索功能**：支持按网站名称、描述、URL搜索
-- ✅ **本地存储**：所有数据存储在浏览器IndexedDB中，无需服务器
-- ✅ **导入导出**：支持 JSON 格式的数据导入导出
-- ✅ **远程同步**：支持通过 GitHub Gist 进行数据加密同步
+- **点击直达**：点击卡片直接在新标签页打开网站；悬停工具栏提供详情 / 编辑 / 删除
+- **秒搜**：`Ctrl/⌘ + K` 全局聚焦搜索框，300ms 防抖实时过滤（名称 / 描述 / URL）
+- **多维筛选**：侧边栏分类（支持按默认 / 名称 / 数量排序，偏好自动记忆）+ 标签多选
+- **自动站点图标**：未上传图标时自动加载站点 favicon，失败回退占位图标；也可手动上传自定义图标
+- **APIKey 管理**：为每个网站保存多个 APIKey，脱敏显示、一键复制
+- **数据导入导出**：JSON 格式，导入支持"合并（按 URL 去重）/ 替换"两种模式
+- **远程同步**：通过 GitHub Gist 进行 AES-256-GCM 加密同步（PBKDF2 派生密钥），跨设备恢复数据
+- **离线可用**：内置 Service Worker，页面与静态资源可离线缓存
 
 ## 技术栈
 
-- **框架**：Vue 3 (Composition API + `<script setup>`)
-- **语言**：TypeScript（宽松模式）
-- **构建工具**：Vite
-- **样式**：Tailwind CSS
-- **数据库**：Dexie.js (IndexedDB封装)
-- **图标**：Material Design Icons
-- **状态管理**：Pinia
+| 项   | 说明                                                  |
+| ---- | ----------------------------------------------------- |
+| 框架 | Vue 3（`<script setup>` + Composition API）           |
+| 构建 | Vite 8（Rolldown 内核）                               |
+| 语言 | TypeScript（宽松模式）                                |
+| 样式 | Tailwind CSS 3 + Neumorphism（软 UI）设计系统         |
+| 状态 | Pinia（筛选状态）+ 模块级单例 composables（业务数据） |
+| 存储 | Dexie.js（IndexedDB 封装），库名 `SitesDB`            |
 
 ## 快速开始
 
-### 安装依赖
 ```bash
 npm install
+npm run dev        # 开发服务器 http://localhost:7080
+npm run build      # 产物输出到 dist/
+npm run type-check # 类型检查
 ```
 
-### 开发模式
-```bash
-npm run dev
-```
+### 安装为 Chrome 扩展（推荐）
 
-访问 http://localhost:3000
+1. 打开 `chrome://extensions/`，开启右上角**开发者模式**
+2. 点击**加载已解压的扩展程序**，选择项目的 `dist` 目录
+3. 建议在 `chrome://extensions/shortcuts` 为扩展设置全局快捷键（如 `Ctrl+B`），随时一键唤起
 
-### 构建 Chrome 扩展
+> 扩展模式下点击工具栏图标会在新标签页打开工具集；数据独立于普通网页环境。
 
-注意修改 `vite.config.ts` 中的 `base` 为 `/` ,构建完成后，`dist` 目录包含完整的 Chrome 扩展文件。
+### 部署为静态网站
 
-## 安装 Chrome 扩展
+项目使用相对路径 `base: './'`，`dist` 可部署在任意子路径（当前线上：`https://younglina.wang/tool-links/`）。手机浏览器访问后"添加到主屏幕"即可作为 PWA 使用。
 
-1. 打开 Chrome，访问 `chrome://extensions/`
-2. 开启右上角的 **开发者模式**
-3. 点击 **加载已解压的扩展程序**
-4. 选择项目的 `dist` 文件夹
+## 日常使用建议
 
-点击扩展图标即可打开工具集。
+- **电脑**：装成 Chrome 扩展 + 全局快捷键，点开即搜即达
+- **多设备**：日常数据变动后用"远程同步 → 上传"，新设备配置 Token 与 Gist ID 后"下载"合并恢复
+- **备份**：重要数据定期"导出数据"保存 JSON
+
+## 数据与隐私
+
+- 所有数据仅存于浏览器本地（IndexedDB），卸载浏览器数据前请先同步或导出
+- 远程同步数据经 AES-256-GCM 加密后才上传私有 Gist，同步密码不落盘、丢失无法解密
+- 未上传图标的网站会自动加载其站点 favicon 用于展示（仅图片请求，不收集任何数据）
 
 ## 项目结构
 
 ```
-links/
 ├── src/
-│   ├── components/          # 组件
-│   │   ├── layouts/        # 布局组件
-│   │   │   ├── Header.vue
-│   │   │   ├── Sidebar.vue
-│   │   │   └── MainContent.vue
-│   │   ├── website/       # 网站相关组件
-│   │   │   ├── WebsiteCard.vue
-│   │   │   ├── WebsiteDetailDrawer.vue
-│   │   │   ├── WebsiteForm.vue
-│   │   │   ├── ImageUploader.vue
-│   │   │   └── ApiKeyInput.vue
-│   │   ├── filter/        # 筛选组件
-│   │   │   ├── SearchBar.vue
-│   │   │   ├── CategoryFilter.vue
-│   │   │   └── TagFilter.vue
-│   │   └── common/        # 通用组件
-│   │       ├── ThemeSwitcher.vue
-│   │       ├── CategoryDialog.vue
-│   │       └── TagDialog.vue
-│   ├── composables/        # 组合式函数
-│   │   ├── useDexie.ts
-│   │   ├── useWebsites.ts
-│   │   ├── useCategories.ts
-│   │   ├── useTags.ts
-│   │   ├── useImageUpload.ts
-│   │   ├── useApiKey.ts
-│   │   └── useTheme.ts
-│   ├── db/                 # 数据库
-│   │   ├── index.ts        # Dexie实例
-│   │   └── seed.ts         # 预置数据
-│   ├── stores/             # Pinia状态管理
-│   │   └── app.ts
-│   ├── types/              # TypeScript类型定义
-│   │   └── index.ts
-│   ├── utils/              # 工具函数
-│   │   ├── validators.ts
-│   │   ├── formatters.ts
-│   │   └── constants.ts
-│   └── styles/             # 样式文件
-│       ├── main.css
-│       └── themes/
-│           └── neumorphism.css
-├── public/
-│   ├── background.js       # Chrome 扩展 background script
-│   └── tools.png           # 扩展图标
-├── manifest.json           # Chrome 扩展配置
-├── vite.config.js          # Vite 配置
-├── pack.bat                # Windows 打包脚本
-└── pack.sh                 # Linux/Mac 打包脚本
+│   ├── components/
+│   │   ├── layouts/        # Header / Sidebar / MainContent（核心列表页）
+│   │   ├── filter/         # SearchBar / CategoryFilter（分类+排序）
+│   │   ├── website/        # WebsiteCard / WebsiteForm / WebsiteDetailDrawer / ImageUploader / ApiKeyInput
+│   │   ├── common/         # CategoryManageModal / TagManageModal
+│   │   └── SyncSettings.vue
+│   ├── composables/        # useWebsites / useCategories / useTags / useImageUpload / useImportExport / useApiKey / useTheme
+│   ├── stores/             # app（筛选状态）/ sync（Gist 同步状态机）
+│   ├── services/           # gistSync（GitHub Gist REST）
+│   ├── db/                 # Dexie 实例与种子数据
+│   ├── utils/              # crypto / merge / validators / constants
+│   └── styles/             # main.css + themes/neumorphism.css
+├── public/                 # manifest.json + background.js（Chrome 扩展）、sw.js（离线缓存）
+├── AGENTS.md               # AI 协作上下文（架构 / 机制 / 开发约定）
+└── prompt.xml              # Neumorphism 设计系统规范
 ```
 
-## 使用说明
+## 面向 AI 助手 / 二次开发
 
-### 添加网站
-1. 点击右上角"添加"下拉菜单，选择"添加网站"
-2. 填写网站信息：
-   - 名称（必填）
-   - URL（必填）
-   - 图标（推荐128-256px，<500KB）
-   - 描述
-   - 分类（必填）
-   - 标签（多选）
-   - APIKeys（可选，可添加多个）
-3. 点击"添加"保存
-
-### 管理网站
-- 点击网站卡片查看详情
-- 详情中可以查看APIKeys（脱敏显示）
-- 支持复制完整APIKey
-- 支持编辑和删除网站
-
-### 筛选网站
-- 使用左侧分类导航筛选
-- 使用标签复选框多选筛选
-- 使用顶部搜索栏搜索
-
-### 导入导出数据
-点击右上角"添加"下拉菜单：
-- **导出数据**：下载当前所有数据的 JSON 文件
-- **导入数据**：选择 JSON 文件导入，支持合并或替换模式
-
-### 远程同步
-点击右上角"添加"下拉菜单，选择"远程同步"：
-1. **配置 GitHub Token**：
-   - 输入 GitHub Personal Access Token（需要 gist 权限）
-   - 点击"验证 Token"按钮验证
-   - Token 会保存在 localStorage 中
-
-2. **设置加密密码**：
-   - 输入加密密码（至少8位）
-   - 确认密码需要与密码一致
-   - 密码不会保存到本地，请务必记住！
-
-3. **上传到 Gist**：
-   - 首次上传会自动创建一个新的私有 Gist
-   - 后续上传会更新已存在的 Gist
-   - 所有数据（网站、分类、标签）都会被上传
-
-4. **从 Gist 下载**：
-   - 下载远程数据并与本地数据合并
-   - 合并策略：按 ID 合并，保留更新时间较新的数据
-   - 下载后会自动显示同步摘要
-
-5. **无痕模式/手动指定**：
-   - 如果在无痕模式下使用，可以手动输入 Gist ID
-   - Gist ID 可从 Gist 页面 URL 中获取（例如：`https://gist.github.com/username/abc123def456` 中的 `abc123def456`）
-   - 点击"使用此 Gist"按钮后即可下载
-
-6. **安全说明**：
-   - 所有数据使用 AES-256-GCM 加密后再上传到 Gist
-   - 即使有人获取到 Gist 内容也无法解密（不知道密码）
-   - 密码用于加密/解密，请妥善保管
-
-## 数据存储
-
-所有数据存储在浏览器的IndexedDB中：
-- `SitesDB` 数据库名
-- 包含3个表：websites, categories, tags
-- 数据只在本地，不会上传到任何服务器
-
-## 注意事项
-
-1. **图片大小**：建议上传的图标小于500KB，推荐128-256px
-2. **APIKey安全**：APIKeys存储在本地IndexedDB中，请妥善保管浏览器数据
-3. **数据备份**：定期导出数据作为备份
-4. **浏览器兼容性**：支持现代浏览器（Chrome, Firefox, Safari, Edge）
-5. **远程同步**：
-   - 密码请务必记住，丢失密码将无法解密数据
-   - 建议在无痕模式下使用时，记录下 Gist ID 以便下次使用
-   - 加密数据存储在私有 Gist 中，只有你能访问
+架构、数据流、关键机制与开发约定详见 [AGENTS.md](./AGENTS.md)；UI 风格遵循 [prompt.xml](./prompt.xml) 中的 Neumorphism 设计系统规范。
 
 ## 许可证
 
