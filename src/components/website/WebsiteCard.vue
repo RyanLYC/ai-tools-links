@@ -1,24 +1,19 @@
 <template>
-  <div
-    @click="handleClick"
-    class="website-card"
-  >
+  <!-- 点击整卡直接访问网站；详情/编辑/删除在 hover 工具栏 -->
+  <div @click="handleOpen" class="website-card" title="点击访问网站">
     <!-- Hover Actions -->
     <div class="card-actions">
-      <a
-        :href="website.url"
-        target="_blank"
-        rel="noopener noreferrer"
-        @click.stop
-        class="action-btn action-link"
-        title="访问网站"
-      >
-        <i class="mdi mdi-open-in-new"></i>
-      </a>
+      <button @click.stop="handleDetail" class="action-btn" title="查看详情">
+        <i class="mdi mdi-eye-outline"></i>
+      </button>
       <button @click.stop="handleEdit" class="action-btn" title="编辑">
         <i class="mdi mdi-pencil-outline"></i>
       </button>
-      <button @click.stop="handleDelete" class="action-btn action-delete" title="删除">
+      <button
+        @click.stop="handleDelete"
+        class="action-btn action-delete"
+        title="删除"
+      >
         <i class="mdi mdi-delete-outline"></i>
       </button>
     </div>
@@ -32,6 +27,15 @@
           class="website-icon"
           @error="handleIconError"
         />
+        <!-- 无上传图标时自动回退到站点 favicon -->
+        <img
+          v-else-if="faviconUrl"
+          :src="faviconUrl"
+          :alt="website.name"
+          class="website-icon"
+          loading="lazy"
+          @error="faviconFailed = true"
+        />
         <div v-else class="website-icon placeholder-icon">
           <i class="mdi mdi-application-outline"></i>
         </div>
@@ -40,18 +44,14 @@
         <h3 class="website-name">{{ website.name }}</h3>
         <!-- Categories as tag style -->
         <div class="category-tags" v-if="categoryNames.length > 0">
-          <span
-            v-for="name in categoryNames"
-            :key="name"
-            class="category-tag"
-          >
+          <span v-for="name in categoryNames" :key="name" class="category-tag">
             {{ name }}
           </span>
         </div>
       </div>
     </div>
 
-    <p class="description line-clamp-2">
+    <p class="description" :title="website.description">
       {{ website.description }}
     </p>
 
@@ -72,80 +72,76 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, onMounted } from 'vue'
-import type { Website } from '@/types'
-import { useCategories } from '@/composables/useCategories'
-import { useTags } from '@/composables/useTags'
+import { computed, ref, watch } from "vue";
+import type { Website } from "@/types";
+import { useCategories } from "@/composables/useCategories";
+import { useTags } from "@/composables/useTags";
+import { getWebsiteIconUrl } from "@/composables/useWebsites";
+import { getFaviconUrl } from "@/composables/useImageUpload";
 
 const props = defineProps<{
-  website: Website
-}>()
+  website: Website;
+}>();
 
 const emit = defineEmits<{
-  (e: 'click'): void
-  (e: 'edit'): void
-  (e: 'delete'): void
-}>()
+  (e: "detail"): void;
+  (e: "edit"): void;
+  (e: "delete"): void;
+}>();
 
-const { categories, loadCategories } = useCategories()
-const { tags, loadTags } = useTags()
+const { categories } = useCategories();
+const { tags } = useTags();
 
-onMounted(() => {
-  loadCategories()
-  loadTags()
-})
+// 图标 blob URL 由 useWebsites 模块级缓存统一管理（按 id 复用、按 updatedAt 重建）
+const iconUrl = computed(() => getWebsiteIconUrl(props.website));
 
-const iconUrl = computed(() => {
-  if (!props.website.icon || props.website.icon.byteLength === 0) {
-    return ''
-  }
-  try {
-    const blob = new Blob([props.website.icon], { type: props.website.iconMimeType || 'image/png' })
-    return URL.createObjectURL(blob)
-  } catch (error) {
-    console.error('Failed to create icon URL:', error)
-    return ''
-  }
-})
+// 自动获取站点 favicon（无上传图标时的回退），加载失败后不再重试
+const faviconFailed = ref(false);
+watch(
+  () => props.website.id,
+  () => {
+    faviconFailed.value = false;
+  },
+);
 
-const category = computed(() => {
-  return categories.value.find(c => (props.website.categoryIds || []).includes(c.id!))
-})
+const faviconUrl = computed(() => {
+  if (iconUrl.value || faviconFailed.value) return "";
+  return getFaviconUrl(props.website.url);
+});
 
 const categoryNames = computed(() => {
   return (props.website.categoryIds || [])
-    .map(id => categories.value.find(c => c.id === id)?.name)
-    .filter(Boolean) as string[]
-})
+    .map((id) => categories.value.find((c) => c.id === id)?.name)
+    .filter(Boolean) as string[];
+});
 
 const getTagName = (tagId: number) => {
-  const tag = tags.value.find(t => t.id === tagId)
-  return tag?.name || ''
-}
+  const tag = tags.value.find((t) => t.id === tagId);
+  return tag?.name || "";
+};
 
-const handleClick = () => {
-  emit('click')
-}
+// 点击整卡：新标签页直接访问网站
+const handleOpen = () => {
+  window.open(props.website.url, "_blank", "noopener,noreferrer");
+};
+
+const handleDetail = () => {
+  emit("detail");
+};
 
 const handleEdit = () => {
-  emit('edit')
-}
+  emit("edit");
+};
 
 const handleDelete = () => {
-  if (confirm('确定要删除这个网站吗？')) {
-    emit('delete')
+  if (confirm("确定要删除这个网站吗？")) {
+    emit("delete");
   }
-}
+};
 
 const handleIconError = () => {
-  console.warn(`Failed to load icon for ${props.website.name}`)
-}
-
-onUnmounted(() => {
-  if (iconUrl.value) {
-    URL.revokeObjectURL(iconUrl.value)
-  }
-})
+  console.warn(`Failed to load icon for ${props.website.name}`);
+};
 </script>
 
 <style scoped>
@@ -153,21 +149,21 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.3s ease-out;
   background: var(--bg-primary);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 14px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   position: relative;
 }
 
 /* Card Actions */
 .card-actions {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 8px;
+  right: 8px;
   display: flex;
-  gap: 6px;
+  gap: 4px;
   opacity: 0;
   transform: translateY(-4px);
   transition: all 0.2s ease;
@@ -180,8 +176,8 @@ onUnmounted(() => {
 }
 
 .action-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -204,18 +200,8 @@ onUnmounted(() => {
   color: #ff3b30;
 }
 
-.action-btn.action-link:hover {
-  color: var(--accent);
-  background: var(--accent);
-  color: #ffffff;
-}
-
-.neumorphism-theme .action-btn.action-link:hover {
-  box-shadow: 2px 2px 4px rgba(108, 99, 255, 0.3), -1px -1px 3px rgba(139, 132, 255, 0.2);
-}
-
 .action-btn .mdi {
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 
 /* Neumorphism card */
@@ -232,12 +218,12 @@ onUnmounted(() => {
 .card-header {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .card-icon-wrapper {
-  width: 56px;
-  height: 56px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
 }
 
@@ -245,8 +231,13 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 14px;
+  border-radius: 8px;
   background: var(--bg-primary);
+  transition: transform 0.25s ease-out;
+}
+
+.website-card:hover .website-icon {
+  transform: scale(1.08);
 }
 
 /* Neumorphism icon */
@@ -268,7 +259,7 @@ onUnmounted(() => {
 }
 
 .website-icon.placeholder-icon .mdi {
-  font-size: 28px;
+  font-size: 16px;
   opacity: 0.5;
 }
 
@@ -277,11 +268,11 @@ onUnmounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .website-name {
-  font-size: 1.0625rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -290,6 +281,11 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.website-card:hover .website-name {
+  color: var(--accent);
 }
 
 /* Category Tags */
@@ -302,10 +298,10 @@ onUnmounted(() => {
 .category-tag {
   display: inline-block;
   width: fit-content;
-  padding: 4px 10px;
+  padding: 2px 8px;
   background: var(--bg-primary);
   color: var(--text-secondary);
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 0.6875rem;
   font-weight: 500;
   transition: all 0.3s ease-out;
@@ -319,12 +315,12 @@ onUnmounted(() => {
 .card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin-top: auto;
 }
 
 .hash-tag {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--accent);
   font-weight: 500;
   transition: color 0.2s ease;
@@ -339,12 +335,12 @@ onUnmounted(() => {
 }
 
 .description {
-  font-size: 0.875rem;
-  line-height: 1.6;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   color: var(--text-secondary);
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1; /* 单行省略，悬停看全文 */
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -352,22 +348,22 @@ onUnmounted(() => {
 
 @media (max-width: 640px) {
   .website-card {
-    padding: 16px;
-    border-radius: 16px;
-    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    gap: 6px;
   }
 
   .card-icon-wrapper {
-    width: 48px;
-    height: 48px;
+    width: 28px;
+    height: 28px;
   }
 
   .website-icon {
-    border-radius: 12px;
+    border-radius: 6px;
   }
 
   .website-icon.placeholder-icon .mdi {
-    font-size: 24px;
+    font-size: 14px;
   }
 
   .website-name {

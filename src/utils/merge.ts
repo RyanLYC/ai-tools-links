@@ -3,15 +3,15 @@
  * 用于合并本地和远程的工具数据
  */
 
-import type { Website, Category, Tag } from '@/types'
+import type { Website, Category, Tag } from "@/types";
 
 /**
  * 解析更新时间
  */
 function parseUpdateDate(dateStr: string | Date): Date {
-  if (!dateStr) return new Date(0)
-  const date = dateStr instanceof Date ? dateStr : new Date(dateStr)
-  return isNaN(date.getTime()) ? new Date(0) : date
+  if (!dateStr) return new Date(0);
+  const date = dateStr instanceof Date ? dateStr : new Date(dateStr);
+  return isNaN(date.getTime()) ? new Date(0) : date;
 }
 
 /**
@@ -20,27 +20,30 @@ function parseUpdateDate(dateStr: string | Date): Date {
  * @param b - 条目 B
  * @returns 比较结果（负数：A较新，正数：B较新，0：相同）
  */
-function compareUpdate<T extends { updatedAt?: string | Date }>(a: T, b: T): number {
-  const dateA = parseUpdateDate(a.updatedAt ?? '')
-  const dateB = parseUpdateDate(b.updatedAt ?? '')
-  return dateB.getTime() - dateA.getTime()
+function compareUpdate<T extends { updatedAt?: string | Date }>(
+  a: T,
+  b: T,
+): number {
+  const dateA = parseUpdateDate(a.updatedAt ?? "");
+  const dateB = parseUpdateDate(b.updatedAt ?? "");
+  return dateB.getTime() - dateA.getTime();
 }
 
 /**
  * 冲突信息
  */
 export interface ConflictInfo<T> {
-  id: number
-  local: T
-  remote: T
+  id: number;
+  local: T;
+  remote: T;
 }
 
 /**
  * 合并结果
  */
 export interface MergeResult<T> {
-  merged: T[]
-  conflicts: ConflictInfo<T>[]
+  merged: T[];
+  conflicts: ConflictInfo<T>[];
 }
 
 /**
@@ -52,69 +55,70 @@ export interface MergeResult<T> {
  */
 export function mergeWebsites(
   localWebsites: Website[],
-  remoteWebsites: Website[]
+  remoteWebsites: Website[],
 ): MergeResult<Website> {
-  const localMap = new Map<number, Website>()
-  const remoteMap = new Map<number, Website>()
+  const localMap = new Map<number, Website>();
+  const remoteMap = new Map<number, Website>();
 
   // 创建 ID 到网站的映射
-  localWebsites.forEach(site => {
+  localWebsites.forEach((site) => {
     if (site.id !== undefined) {
-      localMap.set(site.id, site)
+      localMap.set(site.id, site);
     }
-  })
+  });
 
-  remoteWebsites.forEach(site => {
+  remoteWebsites.forEach((site) => {
     if (site.id !== undefined) {
-      remoteMap.set(site.id, site)
+      remoteMap.set(site.id, site);
     }
-  })
+  });
 
-  const merged: Website[] = []
-  const conflicts: ConflictInfo<Website>[] = []
+  const merged: Website[] = [];
+  const conflicts: ConflictInfo<Website>[] = [];
 
   // 处理所有唯一 ID
-  const allIds = new Set<number>([...localMap.keys(), ...remoteMap.keys()])
+  const allIds = new Set<number>([...localMap.keys(), ...remoteMap.keys()]);
 
-  allIds.forEach(id => {
-    const localSite = localMap.get(id)
-    const remoteSite = remoteMap.get(id)
+  allIds.forEach((id) => {
+    const localSite = localMap.get(id);
+    const remoteSite = remoteMap.get(id);
 
     if (localSite && remoteSite) {
       // 双方都有此网站，比较更新时间
-      const comparison = compareUpdate(localSite, remoteSite)
+      const comparison = compareUpdate(localSite, remoteSite);
 
       if (comparison > 0) {
         // 远程较新
-        merged.push(remoteSite)
+        merged.push(remoteSite);
       } else if (comparison < 0) {
         // 本地较新
-        merged.push(localSite)
+        merged.push(localSite);
       } else {
         // 更新时间相同，可能有冲突
-        const isDifferent = JSON.stringify(localSite) !== JSON.stringify(remoteSite)
+        const isDifferent =
+          JSON.stringify(localSite) !== JSON.stringify(remoteSite);
         if (isDifferent) {
           conflicts.push({
             id,
             local: localSite,
-            remote: remoteSite
-          })
+            remote: remoteSite,
+          });
         }
-        merged.push(localSite)
+        merged.push(localSite);
       }
     } else if (localSite) {
       // 仅本地有
-      merged.push(localSite)
+      merged.push(localSite);
     } else if (remoteSite) {
       // 仅远程有
-      merged.push(remoteSite)
+      merged.push(remoteSite);
     }
-  })
+  });
 
   // 按更新时间排序
-  merged.sort((a, b) => compareUpdate(a, b))
+  merged.sort((a, b) => compareUpdate(a, b));
 
-  return { merged, conflicts }
+  return { merged, conflicts };
 }
 
 /**
@@ -125,20 +129,20 @@ export function mergeWebsites(
  */
 export function mergeCategories(
   localCategories: Category[],
-  remoteCategories: Category[]
+  remoteCategories: Category[],
 ): Category[] {
-  const merged = new Map<string, Category>()
+  const merged = new Map<string, Category>();
 
   // 合并所有分类，按名称去重
-  const allCategories = [...localCategories, ...remoteCategories]
-  allCategories.forEach(category => {
-    const key = `${category.name}_${category.iconName}`
+  const allCategories = [...localCategories, ...remoteCategories];
+  allCategories.forEach((category) => {
+    const key = `${category.name}_${category.iconName}`;
     if (!merged.has(key)) {
-      merged.set(key, category)
+      merged.set(key, category);
     }
-  })
+  });
 
-  return Array.from(merged.values())
+  return Array.from(merged.values());
 }
 
 /**
@@ -148,87 +152,22 @@ export function mergeCategories(
  * @returns 合并后的标签数组
  */
 export function mergeTags(localTags: Tag[], remoteTags: Tag[]): Tag[] {
-  const merged = new Map<string, Tag>()
+  const merged = new Map<string, Tag>();
 
   // 合并所有标签，按名称去重
-  const allTags = [...localTags, ...remoteTags]
-  allTags.forEach(tag => {
-    const key = tag.name
+  const allTags = [...localTags, ...remoteTags];
+  allTags.forEach((tag) => {
+    const key = tag.name;
     if (merged.has(key)) {
       // 累加计数
-      const existing = merged.get(key)!
-      existing.count = Math.max(existing.count, tag.count)
+      const existing = merged.get(key)!;
+      existing.count = Math.max(existing.count, tag.count);
     } else {
-      merged.set(key, { ...tag })
+      merged.set(key, { ...tag });
     }
-  })
+  });
 
-  return Array.from(merged.values())
-}
-
-/**
- * 检测本地和远程数据之间的冲突
- * @param localData - 本地数据数组
- * @param remoteData - 远程数据数组
- * @returns 冲突列表
- */
-export function detectConflicts<T extends { id: number | undefined }>(
-  localData: T[],
-  remoteData: T[]
-): ConflictInfo<T>[] {
-  const { conflicts } = mergeGeneric(localData, remoteData)
-  return conflicts
-}
-
-/**
- * 通用合并函数
- */
-function mergeGeneric<T extends { id: number | undefined }>(
-  localData: T[],
-  remoteData: T[]
-): MergeResult<T> {
-  const localMap = new Map<number, T>()
-  const remoteMap = new Map<number, T>()
-
-  localData.forEach(item => {
-    if (item.id !== undefined) {
-      localMap.set(item.id, item)
-    }
-  })
-
-  remoteData.forEach(item => {
-    if (item.id !== undefined) {
-      remoteMap.set(item.id, item)
-    }
-  })
-
-  const merged: T[] = []
-  const conflicts: ConflictInfo<T>[] = []
-
-  const allIds = new Set<number>([...localMap.keys(), ...remoteMap.keys()])
-
-  allIds.forEach(id => {
-    const localItem = localMap.get(id)
-    const remoteItem = remoteMap.get(id)
-
-    if (localItem && remoteItem) {
-      const isDifferent = JSON.stringify(localItem) !== JSON.stringify(remoteItem)
-      if (isDifferent) {
-        conflicts.push({
-          id,
-          local: localItem,
-          remote: remoteItem
-        })
-      }
-      merged.push(localItem)
-    } else if (localItem) {
-      merged.push(localItem)
-    } else if (remoteItem) {
-      merged.push(remoteItem)
-    }
-  })
-
-  return { merged, conflicts }
+  return Array.from(merged.values());
 }
 
 /**
@@ -236,15 +175,15 @@ function mergeGeneric<T extends { id: number | undefined }>(
  */
 export interface SyncSummary {
   websiteSummary: {
-    localCount: number
-    remoteCount: number
-    localNewCount: number
-    remoteNewCount: number
-    localUpdatedCount: number
-    remoteUpdatedCount: number
-    conflictCount: number
-    hasChanges: boolean
-  }
+    localCount: number;
+    remoteCount: number;
+    localNewCount: number;
+    remoteNewCount: number;
+    localUpdatedCount: number;
+    remoteUpdatedCount: number;
+    conflictCount: number;
+    hasChanges: boolean;
+  };
 }
 
 /**
@@ -255,60 +194,69 @@ export interface SyncSummary {
  */
 export function getSyncSummary(
   localWebsites: Website[],
-  remoteWebsites: Website[]
+  remoteWebsites: Website[],
 ): SyncSummary {
-  const localIds = new Set(localWebsites.map(t => t.id).filter((id): id is number => id !== undefined))
-  const remoteIds = new Set(remoteWebsites.map(t => t.id).filter((id): id is number => id !== undefined))
+  const localMap = new Map<number, Website>();
+  const remoteMap = new Map<number, Website>();
 
-  const localNew = localWebsites.filter(t => t.id !== undefined && !remoteIds.has(t.id))
-  const remoteNew = remoteWebsites.filter(t => t.id !== undefined && !localIds.has(t.id))
+  localWebsites.forEach((site) => {
+    if (site.id !== undefined) localMap.set(site.id, site);
+  });
+  remoteWebsites.forEach((site) => {
+    if (site.id !== undefined) remoteMap.set(site.id, site);
+  });
 
-  const localUpdated: Website[] = []
-  const remoteUpdated: Website[] = []
+  let localNewCount = 0;
+  let remoteNewCount = 0;
+  let localUpdatedCount = 0;
+  let remoteUpdatedCount = 0;
+  let conflictCount = 0;
 
-  const commonIds = [...localIds].filter(id => remoteIds.has(id))
-
-  commonIds.forEach(id => {
-    const localSite = localWebsites.find(t => t.id === id)
-    const remoteSite = remoteWebsites.find(t => t.id === id)
+  // 一次遍历所有 id，O(n) 完成统计
+  const allIds = new Set<number>([...localMap.keys(), ...remoteMap.keys()]);
+  allIds.forEach((id) => {
+    const localSite = localMap.get(id);
+    const remoteSite = remoteMap.get(id);
 
     if (localSite && remoteSite) {
-      const comparison = compareUpdate(localSite, remoteSite)
-
+      const comparison = compareUpdate(localSite, remoteSite);
       if (comparison < 0) {
         // 本地较新
-        localUpdated.push(localSite)
+        localUpdatedCount++;
       } else if (comparison > 0) {
         // 远程较新
-        remoteUpdated.push(remoteSite)
+        remoteUpdatedCount++;
+      } else if (JSON.stringify(localSite) !== JSON.stringify(remoteSite)) {
+        conflictCount++;
       }
+    } else if (localSite) {
+      localNewCount++;
+    } else {
+      remoteNewCount++;
     }
-  })
-
-  const { conflicts } = mergeWebsites(localWebsites, remoteWebsites)
+  });
 
   return {
     websiteSummary: {
       localCount: localWebsites.length,
       remoteCount: remoteWebsites.length,
-      localNewCount: localNew.length,
-      remoteNewCount: remoteNew.length,
-      localUpdatedCount: localUpdated.length,
-      remoteUpdatedCount: remoteUpdated.length,
-      conflictCount: conflicts.length,
+      localNewCount,
+      remoteNewCount,
+      localUpdatedCount,
+      remoteUpdatedCount,
+      conflictCount,
       hasChanges:
-        localNew.length > 0 ||
-        remoteNew.length > 0 ||
-        localUpdated.length > 0 ||
-        remoteUpdated.length > 0
-    }
-  }
+        localNewCount > 0 ||
+        remoteNewCount > 0 ||
+        localUpdatedCount > 0 ||
+        remoteUpdatedCount > 0,
+    },
+  };
 }
 
 export default {
   mergeWebsites,
   mergeCategories,
   mergeTags,
-  detectConflicts,
-  getSyncSummary
-}
+  getSyncSummary,
+};

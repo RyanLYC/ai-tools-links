@@ -2,10 +2,7 @@
   <header class="header">
     <div class="header-content">
       <div class="header-left">
-        <button
-          @click="toggleSidebar"
-          class="menu-btn lg:hidden"
-        >
+        <button @click="toggleSidebar" class="menu-btn lg:hidden">
           <i class="mdi mdi-menu text-xl"></i>
         </button>
         <div class="logo">
@@ -25,7 +22,10 @@
           <button @click="toggleDropdown" class="action-btn">
             <i class="mdi mdi-plus"></i>
             <span class="btn-text">添加</span>
-            <i class="mdi mdi-chevron-down chevron" :class="{ 'rotate': showDropdown }"></i>
+            <i
+              class="mdi mdi-chevron-down chevron"
+              :class="{ rotate: showDropdown }"
+            ></i>
           </button>
           <Transition name="dropdown">
             <div v-if="showDropdown" class="dropdown-menu">
@@ -49,7 +49,13 @@
               <label class="dropdown-item">
                 <i class="mdi mdi-import"></i>
                 <span>导入数据</span>
-                <input type="file" accept=".json" @change="handleImportClick" @click.stop hidden />
+                <input
+                  type="file"
+                  accept=".json"
+                  @change="handleImportClick"
+                  @click.stop
+                  hidden
+                />
               </label>
               <div class="dropdown-divider"></div>
               <button @click="handleAction('sync')" class="dropdown-item">
@@ -61,16 +67,26 @@
         </div>
 
         <Teleport to="body">
-          <div v-if="showImportDialog" class="modal-overlay" @click="showImportDialog = false">
+          <div
+            v-if="showImportDialog"
+            class="modal-overlay"
+            @click="showImportDialog = false"
+          >
             <div class="modal-content" @click.stop>
               <h3 class="modal-title">导入数据</h3>
               <p class="modal-desc">请选择导入方式：</p>
               <div class="modal-actions">
-                <button @click="handleImportConfirm('merge')" class="modal-btn primary">
+                <button
+                  @click="handleImportConfirm('merge')"
+                  class="modal-btn primary"
+                >
                   <i class="mdi mdi-merge"></i>
                   合并（跳过重复）
                 </button>
-                <button @click="handleImportConfirm('replace')" class="modal-btn danger">
+                <button
+                  @click="handleImportConfirm('replace')"
+                  class="modal-btn danger"
+                >
                   <i class="mdi mdi-replace"></i>
                   替换（清空现有数据）
                 </button>
@@ -87,95 +103,105 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import SearchBar from '@/components/filter/SearchBar.vue'
-import { exportData, importData } from '@/composables/useImportExport'
+import { ref, onMounted, onUnmounted } from "vue";
+import SearchBar from "@/components/filter/SearchBar.vue";
+import { exportData, importData } from "@/composables/useImportExport";
 
 const emit = defineEmits<{
-  (e: 'toggle-sidebar'): void
-  (e: 'action', type: 'website' | 'category' | 'tag' | 'export' | 'import' | 'sync'): void
-}>()
+  (e: "toggle-sidebar"): void;
+  (
+    e: "action",
+    type: "website" | "category" | "tag" | "export" | "import" | "sync",
+  ): void;
+  (e: "imported"): void;
+}>();
 
-const showDropdown = ref(false)
-const dropdownRef = ref<HTMLElement | null>(null)
-const importing = ref(false)
-const exporting = ref(false)
-const showImportDialog = ref(false)
-let pendingImportFile: File | null = null
+const showDropdown = ref(false);
+const dropdownRef = ref<HTMLElement | null>(null);
+const importing = ref(false);
+const exporting = ref(false);
+const showImportDialog = ref(false);
+let pendingImportFile: File | null = null;
 
 const toggleSidebar = () => {
-  emit('toggle-sidebar')
-}
+  emit("toggle-sidebar");
+};
 
 const toggleDropdown = () => {
-  showDropdown.value = !showDropdown.value
-}
+  showDropdown.value = !showDropdown.value;
+};
 
-const handleAction = (type: 'website' | 'category' | 'tag' | 'export' | 'import') => {
-  if (type === 'export') {
-    handleExport()
+const handleAction = (
+  type: "website" | "category" | "tag" | "export" | "import",
+) => {
+  if (type === "export") {
+    handleExport();
   } else {
-    showDropdown.value = false
-    emit('action', type)
+    showDropdown.value = false;
+    emit("action", type);
   }
-}
+};
 
 const handleExport = async () => {
-  showDropdown.value = false
-  exporting.value = true
+  showDropdown.value = false;
+  exporting.value = true;
   try {
-    await exportData()
+    await exportData();
   } catch (error) {
-    console.error('Failed to export:', error)
-    alert('导出失败')
+    console.error("Failed to export:", error);
+    alert("导出失败");
   } finally {
-    exporting.value = false
+    exporting.value = false;
   }
-}
+};
 
 const handleImportClick = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
 
-  showDropdown.value = false
-  pendingImportFile = file
-  showImportDialog.value = true
-  input.value = ''
-}
+  showDropdown.value = false;
+  pendingImportFile = file;
+  showImportDialog.value = true;
+  input.value = "";
+};
 
-const handleImportConfirm = async (mode: 'merge' | 'replace') => {
-  if (!pendingImportFile) return
+const handleImportConfirm = async (mode: "merge" | "replace") => {
+  if (!pendingImportFile) return;
 
-  showImportDialog.value = false
-  importing.value = true
+  showImportDialog.value = false;
+  importing.value = true;
 
   try {
-    const result = await importData(pendingImportFile, mode)
-    const modeText = mode === 'merge' ? '合并' : '替换'
-    alert(`${modeText}成功！\n新增网站: ${result.websites}\n分类: ${result.categories}\n标签: ${result.tags}`)
+    const result = await importData(pendingImportFile, mode);
+    const modeText = mode === "merge" ? "合并" : "替换";
+    alert(
+      `${modeText}成功！\n新增网站: ${result.websites}\n分类: ${result.categories}\n标签: ${result.tags}`,
+    );
+    // 通知父组件刷新界面数据
+    emit("imported");
   } catch (error) {
-    console.error('Failed to import:', error)
-    alert('导入失败')
+    console.error("Failed to import:", error);
+    alert("导入失败");
   } finally {
-    importing.value = false
-    pendingImportFile = null
+    importing.value = false;
+    pendingImportFile = null;
   }
-}
+};
 
 const handleClickOutside = (e: MouseEvent) => {
   if (dropdownRef.value && !dropdownRef.value.contains(e.target as Node)) {
-    showDropdown.value = false
+    showDropdown.value = false;
   }
-}
+};
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+  document.addEventListener("click", handleClickOutside);
+});
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+  document.removeEventListener("click", handleClickOutside);
+});
 </script>
 
 <style scoped>
@@ -188,11 +214,14 @@ onUnmounted(() => {
 
 /* Neumorphism header styles */
 .neumorphism-theme .header {
-  box-shadow: 0 4px 10px rgb(163,177,198,0.4), 0 -2px 6px rgba(255,255,255,0.6);
+  box-shadow:
+    0 4px 10px rgb(163, 177, 198, 0.4),
+    0 -2px 6px rgba(255, 255, 255, 0.6);
 }
 
 .header-content {
-  padding: 0 2rem;
+  position: relative; /* 供搜索框绝对居中定位 */
+  padding: 0 2rem; /* 与主内容区 32px 左右距对齐 */
   height: 64px;
   display: flex;
   align-items: center;
@@ -244,13 +273,17 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  color: var(--accent);
-  background: var(--bg-primary);
+  /* 品牌渐变底：蓝 → 青 */
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent), var(--secondary-accent));
+  box-shadow:
+    3px 3px 8px rgba(26, 115, 232, 0.28),
+    -2px -2px 6px rgba(255, 255, 255, 0.8);
+  transition: transform 0.25s ease-out;
 }
 
-/* Neumorphism logo icon well */
-.neumorphism-theme .logo-icon {
-  box-shadow: var(--shadow-inset);
+.logo-icon:hover {
+  transform: rotate(-6deg) scale(1.05);
 }
 
 .logo-text {
@@ -261,9 +294,11 @@ onUnmounted(() => {
 }
 
 .header-center {
-  flex: 1;
-  max-width: 560px;
-  margin-left: auto;
+  /* 绝对定位严格居中，不受左右两侧元素宽度差影响 */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 44vw);
 }
 
 .header-right {
@@ -280,7 +315,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: var(--accent);
+  /* 与 logo 呼应的品牌渐变 */
+  background: linear-gradient(135deg, var(--accent), var(--secondary-accent));
   color: #ffffff;
   border-radius: 12px;
   font-weight: 600;
@@ -289,16 +325,25 @@ onUnmounted(() => {
 }
 
 .neumorphism-theme .action-btn {
-  box-shadow: 5px 5px 10px rgb(163,177,198,0.6), -5px -5px 10px rgba(255,255,255,0.5);
+  box-shadow:
+    5px 5px 10px rgb(163, 177, 198, 0.6),
+    -5px -5px 10px rgba(255, 255, 255, 0.5);
 }
 
 .action-btn:hover {
-  background: var(--accent-light);
+  background: linear-gradient(
+    135deg,
+    var(--accent-light),
+    var(--secondary-accent)
+  );
+  box-shadow: 0 6px 16px rgba(26, 115, 232, 0.3);
 }
 
 .neumorphism-theme .action-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 8px 8px 16px rgb(163,177,198,0.7), -8px -8px 16px rgba(255,255,255,0.6);
+  box-shadow:
+    0 6px 16px rgba(26, 115, 232, 0.3),
+    8px 8px 16px rgb(163, 177, 198, 0.5);
 }
 
 .action-btn .mdi {
@@ -394,9 +439,10 @@ onUnmounted(() => {
   }
 
   .header-center {
+    position: static;
+    transform: none;
     width: 100%;
-    max-width: none;
-    margin-top: 0;
+    margin-top: 8px;
   }
 
   .btn-text {

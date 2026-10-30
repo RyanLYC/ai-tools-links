@@ -1,29 +1,24 @@
-import { ref, onMounted, watch } from 'vue'
+import { ref } from "vue";
+
+const currentTheme = ref("neumorphism");
+
+const setTheme = (theme: string) => {
+  currentTheme.value = theme;
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("theme", theme);
+};
+
+const loadTheme = () => {
+  const savedTheme = localStorage.getItem("theme");
+  setTheme(savedTheme === "neumorphism" ? savedTheme : "neumorphism");
+};
 
 export const useTheme = () => {
-  const currentTheme = ref('neumorphism')
-
-  const setTheme = (theme: string) => {
-    currentTheme.value = theme
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
-  }
-
-  const loadTheme = () => {
-    const savedTheme = localStorage.getItem('theme')
-    if (savedTheme === 'neumorphism') {
-      setTheme(savedTheme)
-    } else {
-      setTheme('neumorphism')
-    }
-  }
-
-  onMounted(() => {
-    loadTheme()
-  })
+  // setup 阶段同步恢复主题，避免首帧 data-theme 缺失导致样式闪烁
+  loadTheme();
 
   return {
     currentTheme,
-    setTheme
-  }
-}
+    setTheme,
+  };
+};

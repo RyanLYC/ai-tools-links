@@ -19,13 +19,11 @@ seedDatabase()
     app.mount("#app");
   });
 
-if ("serviceWorker" in navigator) {
+// 注册 Service Worker：仅 http(s) 环境生效（Chrome 扩展为 chrome-extension:// 协议，跳过）
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/sw.js")
-      .then((registration) => {
-        console.log("SW registered: ", registration);
-      })
+      .register(`${import.meta.env.BASE_URL}sw.js`)
       .catch((registrationError) => {
         console.log("SW registration failed: ", registrationError);
       });

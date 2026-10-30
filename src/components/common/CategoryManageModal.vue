@@ -15,7 +15,10 @@
               <!-- Category Items -->
               <div class="items-container">
                 <!-- Add New Item -->
-                <div class="item add-item" :class="{ 'is-editing': editingId === 'new' }">
+                <div
+                  class="item add-item"
+                  :class="{ 'is-editing': editingId === 'new' }"
+                >
                   <!-- Add Button -->
                   <template v-if="editingId !== 'new'">
                     <button @click="startAdd" class="add-trigger">
@@ -27,7 +30,10 @@
                   <!-- Add Mode -->
                   <template v-else>
                     <div class="edit-row">
-                      <div class="icon-picker-trigger" @click="toggleIconPicker">
+                      <div
+                        class="icon-picker-trigger"
+                        @click="toggleIconPicker"
+                      >
                         <i :class="['mdi', `mdi-${editForm.iconName}`]"></i>
                         <i class="mdi mdi-chevron-down picker-arrow"></i>
                       </div>
@@ -40,7 +46,11 @@
                         @keyup.escape="cancelEdit"
                         ref="addInputRef"
                       />
-                      <button @click="handleSave" class="action-btn confirm" :disabled="!editForm.name.trim()">
+                      <button
+                        @click="handleSave"
+                        class="action-btn confirm"
+                        :disabled="!editForm.name.trim()"
+                      >
                         <i class="mdi mdi-check"></i>
                       </button>
                       <button @click="cancelEdit" class="action-btn cancel">
@@ -54,7 +64,10 @@
                           v-for="icon in availableIcons"
                           :key="icon"
                           @click="selectIcon(icon)"
-                          :class="['icon-option', editForm.iconName === icon ? 'selected' : '']"
+                          :class="[
+                            'icon-option',
+                            editForm.iconName === icon ? 'selected' : '',
+                          ]"
                         >
                           <i :class="['mdi', `mdi-${icon}`]"></i>
                         </div>
@@ -65,7 +78,7 @@
 
                 <!-- Existing Categories -->
                 <div
-                  v-for="category in categories"
+                  v-for="category in realCategories"
                   :key="category.id"
                   class="item"
                   :class="{ 'is-editing': editingId === category.id }"
@@ -79,10 +92,16 @@
                       <span class="item-name">{{ category.name }}</span>
                     </div>
                     <div class="item-actions">
-                      <button @click="startEdit(category)" class="action-btn edit">
+                      <button
+                        @click="startEdit(category)"
+                        class="action-btn edit"
+                      >
                         <i class="mdi mdi-pencil-outline"></i>
                       </button>
-                      <button @click="handleDelete(category)" class="action-btn delete">
+                      <button
+                        @click="handleDelete(category)"
+                        class="action-btn delete"
+                      >
                         <i class="mdi mdi-delete-outline"></i>
                       </button>
                     </div>
@@ -91,7 +110,10 @@
                   <!-- Edit Mode -->
                   <template v-else>
                     <div class="edit-row">
-                      <div class="icon-picker-trigger" @click="toggleIconPicker">
+                      <div
+                        class="icon-picker-trigger"
+                        @click="toggleIconPicker"
+                      >
                         <i :class="['mdi', `mdi-${editForm.iconName}`]"></i>
                         <i class="mdi mdi-chevron-down picker-arrow"></i>
                       </div>
@@ -118,7 +140,10 @@
                           v-for="icon in availableIcons"
                           :key="icon"
                           @click="selectIcon(icon)"
-                          :class="['icon-option', editForm.iconName === icon ? 'selected' : '']"
+                          :class="[
+                            'icon-option',
+                            editForm.iconName === icon ? 'selected' : '',
+                          ]"
                         >
                           <i :class="['mdi', `mdi-${icon}`]"></i>
                         </div>
@@ -136,208 +161,520 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, nextTick } from 'vue'
-import { useCategories } from '@/composables/useCategories'
-import type { Category } from '@/types'
+import { ref, reactive, onMounted, watch, nextTick, computed } from "vue";
+import { useCategories } from "@/composables/useCategories";
+import type { Category } from "@/types";
 
 const props = defineProps<{
-  isOpen: boolean
-}>()
+  isOpen: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+  (e: "close"): void;
+}>();
 
-const { categories, loadCategories, addCategory, updateCategory, deleteCategory } = useCategories()
+const {
+  categories,
+  loadCategories,
+  addCategory,
+  updateCategory,
+  deleteCategory,
+} = useCategories();
 
-const editingId = ref<number | 'new' | null>(null)
-const showIconPicker = ref(false)
-const editInputRef = ref<HTMLInputElement | null>(null)
-const addInputRef = ref<HTMLInputElement | null>(null)
+const realCategories = computed(() => {
+  const array = JSON.parse(JSON.stringify(categories.value)) as Category[];
+
+  array.sort((a, b) => {
+    const nameA = a.name || "";
+    const nameB = b.name || "";
+    if (nameA.match(/^[a-zA-Z]/) && !nameB.match(/^[a-zA-Z]/)) {
+      return -1;
+    }
+    if (!nameA.match(/^[a-zA-Z]/) && nameB.match(/^[a-zA-Z]/)) {
+      return 1;
+    }
+    return nameA.localeCompare(nameB, "zh-CN");
+  });
+  return array;
+});
+
+const editingId = ref<number | "new" | null>(null);
+const showIconPicker = ref(false);
+const editInputRef = ref<HTMLInputElement | null>(null);
+const addInputRef = ref<HTMLInputElement | null>(null);
 
 const editForm = reactive({
-  name: '',
-  iconName: 'folder'
-})
+  name: "",
+  iconName: "folder",
+});
 
 const availableIcons = [
   // AI & Tech
-  'robot', 'robot-outline', 'brain', 'head-snowflake', 'memory', 'chip',
-  'creation', 'creation-outline', 'auto-fix', 'lightning-bolt', 'atom', 'atom-variant',
-  'raspberry-pi', 'cpu-32-bit', 'cpu-64-bit', 'expansion-card',
+  "robot",
+  "robot-outline",
+  "brain",
+  "head-snowflake",
+  "memory",
+  "chip",
+  "creation",
+  "creation-outline",
+  "auto-fix",
+  "lightning-bolt",
+  "atom",
+  "atom-variant",
+  "raspberry-pi",
+  "cpu-32-bit",
+  "cpu-64-bit",
+  "expansion-card",
   // Media & Image
-  'image', 'image-outline', 'image-multiple', 'image-edit', 'camera', 'camera-outline',
-  'video', 'video-outline', 'movie', 'movie-open', 'movie-outline', 'filmstrip',
-  'music', 'music-note', 'microphone', 'microphone-outline', 'headphones', 'speaker',
+  "image",
+  "image-outline",
+  "image-multiple",
+  "image-edit",
+  "camera",
+  "camera-outline",
+  "video",
+  "video-outline",
+  "movie",
+  "movie-open",
+  "movie-outline",
+  "filmstrip",
+  "music",
+  "music-note",
+  "microphone",
+  "microphone-outline",
+  "headphones",
+  "speaker",
   // Development
-  'code-tags', 'code-braces', 'code-brackets', 'code-json', 'xml', 'script',
-  'language-javascript', 'language-typescript', 'language-python', 'language-java',
-  'language-html5', 'language-css3', 'language-go', 'language-rust',
-  'git', 'github', 'gitlab', 'source-branch', 'source-merge',
-  'api', 'webhook', 'console', 'console-line', 'terminal', 'powershell',
-  'bug', 'bug-outline', 'test-tube', 'flask', 'flask-outline',
+  "code-tags",
+  "code-braces",
+  "code-brackets",
+  "code-json",
+  "xml",
+  "script",
+  "language-javascript",
+  "language-typescript",
+  "language-python",
+  "language-java",
+  "language-html5",
+  "language-css3",
+  "language-go",
+  "language-rust",
+  "git",
+  "github",
+  "gitlab",
+  "source-branch",
+  "source-merge",
+  "api",
+  "webhook",
+  "console",
+  "console-line",
+  "terminal",
+  "powershell",
+  "bug",
+  "bug-outline",
+  "test-tube",
+  "flask",
+  "flask-outline",
   // Data & Analytics
-  'chart-line', 'chart-bar', 'chart-pie', 'chart-donut', 'chart-areaspline',
-  'chart-timeline', 'chart-scatter-plot', 'poll', 'finance', 'trending-up',
-  'database', 'database-outline', 'table', 'view-list', 'clipboard-list',
-  'calculator', 'calculator-variant', 'sigma', 'function', 'matrix',
+  "chart-line",
+  "chart-bar",
+  "chart-pie",
+  "chart-donut",
+  "chart-areaspline",
+  "chart-timeline",
+  "chart-scatter-plot",
+  "poll",
+  "finance",
+  "trending-up",
+  "database",
+  "database-outline",
+  "table",
+  "view-list",
+  "clipboard-list",
+  "calculator",
+  "calculator-variant",
+  "sigma",
+  "function",
+  "matrix",
   // Design & Creative
-  'palette', 'palette-outline', 'brush', 'brush-outline', 'pencil', 'pencil-outline',
-  'format-paint', 'draw', 'drawing', 'drawing-box', 'vector-square',
-  'shape', 'shape-outline', 'layers', 'layers-outline', 'puzzle', 'puzzle-outline',
-  'lightbulb', 'lightbulb-outline', 'lightbulb-on', 'lightbulb-on-outline',
+  "palette",
+  "palette-outline",
+  "brush",
+  "brush-outline",
+  "pencil",
+  "pencil-outline",
+  "format-paint",
+  "draw",
+  "drawing",
+  "drawing-box",
+  "vector-square",
+  "shape",
+  "shape-outline",
+  "layers",
+  "layers-outline",
+  "puzzle",
+  "puzzle-outline",
+  "lightbulb",
+  "lightbulb-outline",
+  "lightbulb-on",
+  "lightbulb-on-outline",
   // Documents & Text
-  'file-document', 'file-document-outline', 'file-pdf-box', 'file-word', 'file-excel',
-  'notebook', 'notebook-outline', 'note-text', 'note-text-outline', 'text-box',
-  'format-text', 'format-quote-close', 'translate', 'alphabetical', 'spellcheck',
-  'clipboard-text', 'clipboard-text-outline', 'content-copy', 'content-paste',
+  "file-document",
+  "file-document-outline",
+  "file-pdf-box",
+  "file-word",
+  "file-excel",
+  "notebook",
+  "notebook-outline",
+  "note-text",
+  "note-text-outline",
+  "text-box",
+  "format-text",
+  "format-quote-close",
+  "translate",
+  "alphabetical",
+  "spellcheck",
+  "clipboard-text",
+  "clipboard-text-outline",
+  "content-copy",
+  "content-paste",
   // Web & Cloud
-  'web', 'earth', 'google-chrome', 'firefox', 'microsoft-edge',
-  'cloud', 'cloud-outline', 'cloud-download', 'cloud-upload', 'cloud-sync',
-  'server', 'server-network', 'dns', 'wifi', 'access-point',
-  'lan', 'lan-connect', 'router-wireless', 'ethernet', 'ip-network',
+  "web",
+  "earth",
+  "google-chrome",
+  "firefox",
+  "microsoft-edge",
+  "cloud",
+  "cloud-outline",
+  "cloud-download",
+  "cloud-upload",
+  "cloud-sync",
+  "server",
+  "server-network",
+  "dns",
+  "wifi",
+  "access-point",
+  "lan",
+  "lan-connect",
+  "router-wireless",
+  "ethernet",
+  "ip-network",
   // Organization
-  'folder', 'folder-outline', 'folder-open', 'folder-multiple', 'folder-star',
-  'bookmark', 'bookmark-outline', 'bookshelf', 'tag', 'tag-outline',
-  'label', 'label-outline', 'archive', 'package', 'package-variant',
-  'inbox', 'inbox-full', 'tray-full', 'briefcase', 'briefcase-outline',
+  "folder",
+  "folder-outline",
+  "folder-open",
+  "folder-multiple",
+  "folder-star",
+  "bookmark",
+  "bookmark-outline",
+  "bookshelf",
+  "tag",
+  "tag-outline",
+  "label",
+  "label-outline",
+  "archive",
+  "package",
+  "package-variant",
+  "inbox",
+  "inbox-full",
+  "tray-full",
+  "briefcase",
+  "briefcase-outline",
   // Communication
-  'email', 'email-outline', 'gmail', 'chat', 'chat-outline',
-  'forum', 'forum-outline', 'message', 'message-outline', 'comment-text',
-  'phone', 'phone-outline', 'cellphone', 'send', 'share',
-  'share-variant', 'rss', 'broadcast', 'antenna', 'bell',
+  "email",
+  "email-outline",
+  "gmail",
+  "chat",
+  "chat-outline",
+  "forum",
+  "forum-outline",
+  "message",
+  "message-outline",
+  "comment-text",
+  "phone",
+  "phone-outline",
+  "cellphone",
+  "send",
+  "share",
+  "share-variant",
+  "rss",
+  "broadcast",
+  "antenna",
+  "bell",
   // Tools & Settings
-  'cog', 'cog-outline', 'cogs', 'wrench', 'wrench-outline',
-  'hammer', 'hammer-wrench', 'tools', 'toolbox', 'toolbox-outline',
-  'tune', 'tune-vertical', 'screwdriver', 'application-cog', 'account-cog',
+  "cog",
+  "cog-outline",
+  "cogs",
+  "wrench",
+  "wrench-outline",
+  "hammer",
+  "hammer-wrench",
+  "tools",
+  "toolbox",
+  "toolbox-outline",
+  "tune",
+  "tune-vertical",
+  "screwdriver",
+  "application-cog",
+  "account-cog",
   // Education & Learning
-  'school', 'school-outline', 'book', 'book-open', 'book-open-outline',
-  'book-multiple', 'library', 'certificate', 'certificate-outline', 'diploma',
-  'graduation-cap', 'human-male-board', 'teach', 'trophy', 'trophy-outline',
-  'medal', 'medal-outline', 'counter', 'abacus', 'brain',
+  "school",
+  "school-outline",
+  "book",
+  "book-open",
+  "book-open-outline",
+  "book-multiple",
+  "library",
+  "certificate",
+  "certificate-outline",
+  "diploma",
+  "graduation-cap",
+  "human-male-board",
+  "teach",
+  "trophy",
+  "trophy-outline",
+  "medal",
+  "medal-outline",
+  "counter",
+  "abacus",
+  "brain",
   // Favorites & Ratings
-  'star', 'star-outline', 'star-circle', 'heart', 'heart-outline',
-  'thumb-up', 'thumb-up-outline', 'thumb-down', 'fire', 'flash',
-  'flash-outline', 'diamond', 'diamond-outline', 'crown', 'crown-outline',
-  'flag', 'flag-outline', 'pin', 'pin-outline', 'target',
+  "star",
+  "star-outline",
+  "star-circle",
+  "heart",
+  "heart-outline",
+  "thumb-up",
+  "thumb-up-outline",
+  "thumb-down",
+  "fire",
+  "flash",
+  "flash-outline",
+  "diamond",
+  "diamond-outline",
+  "crown",
+  "crown-outline",
+  "flag",
+  "flag-outline",
+  "pin",
+  "pin-outline",
+  "target",
   // Security & Privacy
-  'shield', 'shield-outline', 'shield-check', 'shield-lock', 'lock',
-  'lock-outline', 'lock-open', 'key', 'key-outline', 'key-variant',
-  'fingerprint', 'eye', 'eye-outline', 'eye-off', 'incognito',
-  'security', 'passport', 'id-card', 'account-key', 'two-factor-authentication',
+  "shield",
+  "shield-outline",
+  "shield-check",
+  "shield-lock",
+  "lock",
+  "lock-outline",
+  "lock-open",
+  "key",
+  "key-outline",
+  "key-variant",
+  "fingerprint",
+  "eye",
+  "eye-outline",
+  "eye-off",
+  "incognito",
+  "security",
+  "passport",
+  "id-card",
+  "account-key",
+  "two-factor-authentication",
   // Shopping & Business
-  'cart', 'cart-outline', 'store', 'storefront', 'shopping',
-  'cash', 'cash-multiple', 'credit-card', 'credit-card-outline', 'wallet',
-  'wallet-outline', 'gift', 'gift-outline', 'sale', 'percent',
-  'currency-usd', 'currency-eur', 'currency-cny', 'bitcoin', 'ethereum',
+  "cart",
+  "cart-outline",
+  "store",
+  "storefront",
+  "shopping",
+  "cash",
+  "cash-multiple",
+  "credit-card",
+  "credit-card-outline",
+  "wallet",
+  "wallet-outline",
+  "gift",
+  "gift-outline",
+  "sale",
+  "percent",
+  "currency-usd",
+  "currency-eur",
+  "currency-cny",
+  "bitcoin",
+  "ethereum",
   // Health & Lifestyle
-  'hospital-box', 'medical-bag', 'pill', 'needle', 'stethoscope',
-  'food', 'food-apple', 'coffee', 'coffee-outline', 'glass-mug-variant',
-  'silverware-fork-knife', 'run', 'walk', 'bike', 'yoga',
-  'meditation', 'spa', 'flower', 'leaf', 'tree',
+  "hospital-box",
+  "medical-bag",
+  "pill",
+  "needle",
+  "stethoscope",
+  "food",
+  "food-apple",
+  "coffee",
+  "coffee-outline",
+  "glass-mug-variant",
+  "silverware-fork-knife",
+  "run",
+  "walk",
+  "bike",
+  "yoga",
+  "meditation",
+  "spa",
+  "flower",
+  "leaf",
+  "tree",
   // Entertainment & Games
-  'gamepad-variant', 'controller-classic', 'puzzle', 'dice-multiple', 'cards',
-  'chess-knight', 'poker-chip', 'slot-machine', 'party-popper', 'balloon',
-  'emoticon', 'emoticon-happy', 'emoticon-cool', 'drama-masks', 'theater',
+  "gamepad-variant",
+  "controller-classic",
+  "puzzle",
+  "dice-multiple",
+  "cards",
+  "chess-knight",
+  "poker-chip",
+  "slot-machine",
+  "party-popper",
+  "balloon",
+  "emoticon",
+  "emoticon-happy",
+  "emoticon-cool",
+  "drama-masks",
+  "theater",
   // Travel & Places
-  'airplane', 'car', 'bus', 'train', 'subway',
-  'ferry', 'earth', 'map', 'map-marker', 'compass',
-  'home', 'home-outline', 'office-building', 'city', 'beach',
+  "airplane",
+  "car",
+  "bus",
+  "train",
+  "subway",
+  "ferry",
+  "earth",
+  "map",
+  "map-marker",
+  "compass",
+  "home",
+  "home-outline",
+  "office-building",
+  "city",
+  "beach",
   // Misc
-  'apps', 'view-grid', 'view-dashboard', 'dots-grid', 'infinity',
-  'link', 'link-variant', 'attachment', 'paperclip', 'magnet',
-  'download', 'upload', 'sync', 'refresh', 'cached',
-  'timer', 'clock', 'clock-outline', 'calendar', 'calendar-outline',
-  'alarm', 'bell-outline', 'bullhorn', 'information', 'help-circle'
-]
+  "apps",
+  "view-grid",
+  "view-dashboard",
+  "dots-grid",
+  "infinity",
+  "link",
+  "link-variant",
+  "attachment",
+  "paperclip",
+  "magnet",
+  "download",
+  "upload",
+  "sync",
+  "refresh",
+  "cached",
+  "timer",
+  "clock",
+  "clock-outline",
+  "calendar",
+  "calendar-outline",
+  "alarm",
+  "bell-outline",
+  "bullhorn",
+  "information",
+  "help-circle",
+];
 
 onMounted(() => {
-  loadCategories()
-})
+  loadCategories();
+});
 
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    loadCategories()
-  } else {
-    cancelEdit()
-  }
-})
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      loadCategories();
+    } else {
+      cancelEdit();
+    }
+  },
+);
 
 const startAdd = () => {
-  editingId.value = 'new'
-  editForm.name = ''
-  editForm.iconName = 'folder'
-  showIconPicker.value = false
+  editingId.value = "new";
+  editForm.name = "";
+  editForm.iconName = "folder";
+  showIconPicker.value = false;
   nextTick(() => {
-    addInputRef.value?.focus()
-  })
-}
+    addInputRef.value?.focus();
+  });
+};
 
 const startEdit = (category: Category) => {
-  editingId.value = category.id!
-  editForm.name = category.name
-  editForm.iconName = category.iconName
-  showIconPicker.value = false
+  editingId.value = category.id!;
+  editForm.name = category.name;
+  editForm.iconName = category.iconName;
+  showIconPicker.value = false;
   nextTick(() => {
     // editInputRef is an array when used in v-for
-    const input = Array.isArray(editInputRef.value) ? editInputRef.value[0] : editInputRef.value
-    input?.focus()
-  })
-}
+    const input = Array.isArray(editInputRef.value)
+      ? editInputRef.value[0]
+      : editInputRef.value;
+    input?.focus();
+  });
+};
 
 const cancelEdit = () => {
-  editingId.value = null
-  editForm.name = ''
-  editForm.iconName = 'folder'
-  showIconPicker.value = false
-}
+  editingId.value = null;
+  editForm.name = "";
+  editForm.iconName = "folder";
+  showIconPicker.value = false;
+};
 
 const toggleIconPicker = () => {
-  showIconPicker.value = !showIconPicker.value
-}
+  showIconPicker.value = !showIconPicker.value;
+};
 
 const selectIcon = (icon: string) => {
-  editForm.iconName = icon
-  showIconPicker.value = false
-}
+  editForm.iconName = icon;
+  showIconPicker.value = false;
+};
 
 const handleSave = async () => {
-  if (!editForm.name.trim()) return
+  if (!editForm.name.trim()) return;
 
   try {
-    if (editingId.value === 'new') {
+    if (editingId.value === "new") {
       await addCategory({
         name: editForm.name.trim(),
-        iconName: editForm.iconName
-      })
+        iconName: editForm.iconName,
+      });
     } else if (editingId.value) {
       await updateCategory(editingId.value, {
         name: editForm.name.trim(),
-        iconName: editForm.iconName
-      })
+        iconName: editForm.iconName,
+      });
     }
-    cancelEdit()
+    cancelEdit();
   } catch (error) {
-    console.error('Failed to save category:', error)
-    alert('保存失败')
+    console.error("Failed to save category:", error);
+    alert("保存失败");
   }
-}
+};
 
 const handleDelete = async (category: Category) => {
-  if (!confirm(`确定要删除"${category.name}"吗？`)) return
+  if (!confirm(`确定要删除"${category.name}"吗？`)) return;
 
   try {
-    await deleteCategory(category.id!)
+    await deleteCategory(category.id!);
   } catch (error) {
-    console.error('Failed to delete category:', error)
-    alert('删除失败')
+    console.error("Failed to delete category:", error);
+    alert("删除失败");
   }
-}
+};
 
 const handleClose = () => {
-  cancelEdit()
-  emit('close')
-}
+  cancelEdit();
+  emit("close");
+};
 </script>
 
 <style scoped>
@@ -373,7 +710,7 @@ const handleClose = () => {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(163,177,198,0.15);
+  border-bottom: 1px solid rgba(163, 177, 198, 0.15);
 }
 
 .modal-header h2 {
@@ -615,7 +952,9 @@ const handleClose = () => {
 }
 
 .neumorphism-theme .edit-input:focus {
-  box-shadow: var(--shadow-inset-small), 0 0 0 2px rgba(var(--accent-rgb, 99, 102, 241), 0.15);
+  box-shadow:
+    var(--shadow-inset-small),
+    0 0 0 2px rgba(var(--accent-rgb, 99, 102, 241), 0.15);
 }
 
 .edit-input::placeholder {
@@ -673,7 +1012,7 @@ const handleClose = () => {
 }
 
 .neumorphism-theme .icon-option.selected {
-  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2);
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .icon-option .mdi {
@@ -683,7 +1022,7 @@ const handleClose = () => {
 /* Add Item */
 .add-item {
   background: transparent;
-  border: 2px dashed rgba(163,177,198,0.3);
+  border: 2px dashed rgba(163, 177, 198, 0.3);
 }
 
 .neumorphism-theme .add-item {

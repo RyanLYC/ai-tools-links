@@ -2,7 +2,12 @@
   <main class="main-content">
     <div class="content-wrapper">
       <div class="content-header">
-        <h1 class="text-2xl font-bold">{{ title }}</h1>
+        <div class="content-header-left">
+          <h1 class="text-2xl font-bold">{{ title }}</h1>
+          <p class="content-subtitle">
+            共 {{ filteredWebsites.length }} 个网站
+          </p>
+        </div>
       </div>
 
       <div v-if="isLoading" class="loading-container">
@@ -11,8 +16,12 @@
       </div>
 
       <div v-else-if="filteredWebsites.length === 0" class="empty-state">
-        <i class="mdi mdi-folder-multiple text-6xl text-[var(--text-secondary)]"></i>
-        <p class="text-[var(--text-secondary)] mt-4">还没有对应网站，点击右上角按钮添加第一个网站吧</p>
+        <i
+          class="mdi mdi-folder-multiple text-6xl text-[var(--text-secondary)]"
+        ></i>
+        <p class="text-[var(--text-secondary)] mt-4">
+          还没有对应网站，点击右上角按钮添加第一个网站吧
+        </p>
         <button
           v-if="hasFilters"
           @click="resetFilters"
@@ -28,8 +37,8 @@
           v-for="(website, index) in filteredWebsites"
           :key="website.id"
           :website="website"
-          :class="`stagger-${(index % 6) + 1}`"
-          @click="showDetail(website)"
+          :class="`stagger-${(index % 6) + 1} animate-fade-in-up`"
+          @detail="showDetail(website)"
           @edit="handleCardEdit(website)"
           @delete="handleCardDelete(website)"
         />
@@ -72,205 +81,199 @@
     />
 
     <!-- Tag Manage Modal -->
-    <TagManageModal
-      :is-open="showTagModal"
-      @close="showTagModal = false"
-    />
+    <TagManageModal :is-open="showTagModal" @close="showTagModal = false" />
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useWebsites } from '@/composables/useWebsites'
-import { useCategories } from '@/composables/useCategories'
-import { useTags } from '@/composables/useTags'
-import { useAppStore } from '@/stores/app'
-import WebsiteCard from '@/components/website/WebsiteCard.vue'
-import WebsiteDetailDrawer from '@/components/website/WebsiteDetailDrawer.vue'
-import WebsiteForm from '@/components/website/WebsiteForm.vue'
-import CategoryManageModal from '@/components/common/CategoryManageModal.vue'
-import TagManageModal from '@/components/common/TagManageModal.vue'
-import type { Website } from '@/types'
+import { ref, computed, onMounted } from "vue";
+import { useWebsites } from "@/composables/useWebsites";
+import { useCategories } from "@/composables/useCategories";
+import { useTags } from "@/composables/useTags";
+import { useAppStore } from "@/stores/app";
+import WebsiteCard from "@/components/website/WebsiteCard.vue";
+import WebsiteDetailDrawer from "@/components/website/WebsiteDetailDrawer.vue";
+import WebsiteForm from "@/components/website/WebsiteForm.vue";
+import CategoryManageModal from "@/components/common/CategoryManageModal.vue";
+import TagManageModal from "@/components/common/TagManageModal.vue";
+import type { Website } from "@/types";
 
-const { websites, isLoading, loadWebsites, addWebsite, updateWebsite, deleteWebsite } = useWebsites()
-const { categories, loadCategories } = useCategories()
-const { loadTags } = useTags()
-const appStore = useAppStore()
+const {
+  websites,
+  isLoading,
+  loadWebsites,
+  addWebsite,
+  updateWebsite,
+  deleteWebsite,
+} = useWebsites();
+const { categories, loadCategories } = useCategories();
+const { loadTags } = useTags();
+const appStore = useAppStore();
 
-const selectedWebsite = ref<Website | null>(null)
-const editingWebsite = ref<Website | null>(null)
-const showDetailDrawer = ref(false)
-const showAddForm = ref(false)
-const showEditForm = ref(false)
-const showCategoryModal = ref(false)
-const showTagModal = ref(false)
+const selectedWebsite = ref<Website | null>(null);
+const editingWebsite = ref<Website | null>(null);
+const showDetailDrawer = ref(false);
+const showAddForm = ref(false);
+const showEditForm = ref(false);
+const showCategoryModal = ref(false);
+const showTagModal = ref(false);
 
 onMounted(async () => {
-  await Promise.all([
-    loadWebsites(),
-    loadCategories(),
-    loadTags()
-  ])
-})
+  await Promise.all([loadWebsites(), loadCategories(), loadTags()]);
+});
 
 // Expose openModal method for parent component
-const openModal = (type: 'website' | 'category' | 'tag') => {
+const openModal = (type: "website" | "category" | "tag") => {
   switch (type) {
-    case 'website':
-      showAddForm.value = true
-      break
-    case 'category':
-      showCategoryModal.value = true
-      break
-    case 'tag':
-      showTagModal.value = true
-      break
+    case "website":
+      showAddForm.value = true;
+      break;
+    case "category":
+      showCategoryModal.value = true;
+      break;
+    case "tag":
+      showTagModal.value = true;
+      break;
   }
-}
+};
 
 // Refresh data after sync
 const refreshData = async () => {
-  await Promise.all([
-    loadWebsites(),
-    loadCategories(),
-    loadTags()
-  ])
-}
+  await Promise.all([loadWebsites(), loadCategories(), loadTags()]);
+};
 
-defineExpose({ openModal, refreshData })
+defineExpose({ openModal, refreshData });
 
 const title = computed(() => {
   if (appStore.filter.searchQuery) {
-    return `搜索: "${appStore.filter.searchQuery}"`
+    return `搜索: "${appStore.filter.searchQuery}"`;
   }
   if (appStore.filter.categoryId) {
-    const category = categories.value.find(c => c.id === appStore.filter.categoryId)
-    return category?.name || '全部网站'
+    const category = categories.value.find(
+      (c) => c.id === appStore.filter.categoryId,
+    );
+    return category?.name || "全部网站";
   }
-  return '全部网站'
-})
+  return "全部网站";
+});
+
+// 缓存每条记录的小写搜索串，避免每次过滤重复 toLowerCase
+const searchTextCache = new WeakMap<Website, string>();
+
+const getSearchText = (website: Website): string => {
+  let text = searchTextCache.get(website);
+  if (!text) {
+    text =
+      `${website.name} ${website.description} ${website.url}`.toLowerCase();
+    searchTextCache.set(website, text);
+  }
+  return text;
+};
 
 const filteredWebsites = computed(() => {
-  let result = [...websites.value]
+  let result = [...websites.value];
 
   if (appStore.filter.searchQuery) {
-    const query = appStore.filter.searchQuery.toLowerCase()
-    result = result.filter(w =>
-      w.name.toLowerCase().includes(query) ||
-      w.description.toLowerCase().includes(query) ||
-      w.url.toLowerCase().includes(query)
-    )
+    const query = appStore.filter.searchQuery.toLowerCase();
+    result = result.filter((w) => getSearchText(w).includes(query));
   }
 
   if (appStore.filter.categoryId) {
-    result = result.filter(w => (w.categoryIds || []).includes(appStore.filter.categoryId!))
+    result = result.filter((w) =>
+      (w.categoryIds || []).includes(appStore.filter.categoryId!),
+    );
   }
 
   if (appStore.filter.tagIds.length > 0) {
-    result = result.filter(w =>
-      appStore.filter.tagIds.some(tagId => (w.tagIds || []).includes(tagId))
-    )
+    result = result.filter((w) =>
+      appStore.filter.tagIds.some((tagId) => (w.tagIds || []).includes(tagId)),
+    );
   }
 
-  return result
-})
+  return result;
+});
 
 const hasFilters = computed(() => {
-  return !!appStore.filter.searchQuery
-})
+  return !!appStore.filter.searchQuery;
+});
 
 const resetFilters = () => {
-  appStore.resetFilter()
-}
+  appStore.resetFilter();
+};
 
 const showDetail = (website: Website) => {
-  selectedWebsite.value = website
-  showDetailDrawer.value = true
-}
+  selectedWebsite.value = website;
+  showDetailDrawer.value = true;
+};
 
 const closeDetailDrawer = () => {
-  showDetailDrawer.value = false
-}
+  showDetailDrawer.value = false;
+};
 
-const handleAddWebsite = async (data: Omit<Website, 'id' | 'createdAt' | 'updatedAt'>) => {
+const handleAddWebsite = async (
+  data: Omit<Website, "id" | "createdAt" | "updatedAt">,
+) => {
   try {
-    await addWebsite(data)
-    closeForm()
+    await addWebsite(data);
+    closeForm();
   } catch (error) {
-    console.error('Failed to add website:', error)
-    alert('添加网站失败')
+    console.error("Failed to add website:", error);
+    alert("添加网站失败");
   }
-}
-
-const handleEditWebsite = () => {
-  editingWebsite.value = selectedWebsite.value
-  closeDetailDrawer()
-  showEditForm.value = true
-}
+};
 
 const handleCardEdit = (website: Website) => {
-  editingWebsite.value = website
-  showEditForm.value = true
-}
+  editingWebsite.value = website;
+  showEditForm.value = true;
+};
 
 const handleCardDelete = async (website: Website) => {
   try {
-    await deleteWebsite(website.id!)
+    await deleteWebsite(website.id!);
   } catch (error) {
-    console.error('Failed to delete website:', error)
-    alert('删除网站失败')
+    console.error("Failed to delete website:", error);
+    alert("删除网站失败");
   }
-}
+};
 
-const handleUpdateWebsite = async (data: Omit<Website, 'id' | 'createdAt' | 'updatedAt'>) => {
+const handleUpdateWebsite = async (
+  data: Omit<Website, "id" | "createdAt" | "updatedAt">,
+) => {
   if (editingWebsite.value?.id) {
     try {
-      await updateWebsite(editingWebsite.value.id, data)
-      closeForm()
+      await updateWebsite(editingWebsite.value.id, data);
+      closeForm();
     } catch (error) {
-      console.error('Failed to update website:', error)
-      alert('更新网站失败')
+      console.error("Failed to update website:", error);
+      alert("更新网站失败");
     }
   }
-}
-
-const handleDeleteWebsite = async () => {
-  if (selectedWebsite.value?.id) {
-    try {
-      await deleteWebsite(selectedWebsite.value.id)
-      closeDetailDrawer()
-    } catch (error) {
-      console.error('Failed to delete website:', error)
-      alert('删除网站失败')
-    }
-  }
-}
+};
 
 const closeForm = () => {
-  showAddForm.value = false
-  showEditForm.value = false
-  editingWebsite.value = null
-}
+  showAddForm.value = false;
+  showEditForm.value = false;
+  editingWebsite.value = null;
+};
 </script>
 
 <style scoped>
 .main-content {
   flex: 1;
-  padding: 28px 36px;
+  padding: 24px 32px; /* 与 header 左右 32px 对齐 */
   min-height: calc(100vh - 64px);
   background: var(--bg-primary);
 }
 
 .content-wrapper {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%; /* 不限宽：与 header 两端对齐，避免宽屏下左右留白不均 */
 }
 
 .content-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 32px;
+  margin-bottom: 28px; /* 与网格 gap 同节奏，补偿 neumorphism 阴影占位 */
   gap: 1rem;
 }
 
@@ -282,6 +285,19 @@ const closeForm = () => {
   line-height: 1.2;
 }
 
+.content-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.content-subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
 /* Neumorphism btn-primary */
 .neumorphism-theme .btn-primary {
   background: var(--accent);
@@ -290,19 +306,25 @@ const closeForm = () => {
   border-radius: 12px;
   padding: 12px 20px;
   font-weight: 600;
-  box-shadow: 5px 5px 10px rgb(163,177,198,0.6), -5px -5px 10px rgba(255,255,255,0.5);
+  box-shadow:
+    5px 5px 10px rgb(163, 177, 198, 0.6),
+    -5px -5px 10px rgba(255, 255, 255, 0.5);
   transition: all 0.3s ease-out;
 }
 
 .neumorphism-theme .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 8px 8px 16px rgb(163,177,198,0.7), -8px -8px 16px rgba(255,255,255,0.6);
+  box-shadow:
+    8px 8px 16px rgb(163, 177, 198, 0.7),
+    -8px -8px 16px rgba(255, 255, 255, 0.6);
   background: var(--accent-light);
 }
 
 .neumorphism-theme .btn-primary:active {
   transform: translateY(0.5px);
-  box-shadow: inset 3px 3px 6px rgba(0,0,0,0.2), inset -3px -3px 6px rgba(255,255,255,0.1);
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 0, 0, 0.2),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.1);
 }
 
 /* Neumorphism btn-secondary */
@@ -382,8 +404,9 @@ const closeForm = () => {
 
 .websites-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  /* 最小列宽 220px：紧凑卡片下容纳更多列，一屏展示更多项 */
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
   padding: 4px;
 }
 
@@ -457,7 +480,7 @@ const closeForm = () => {
 
 @media (max-width: 1024px) {
   .main-content {
-    padding: 24px 28px;
+    padding: 20px 24px;
   }
 
   .content-header {
@@ -469,14 +492,14 @@ const closeForm = () => {
   }
 
   .websites-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
   }
 }
 
 @media (max-width: 640px) {
   .main-content {
-    padding: 20px 16px;
+    padding: 16px;
   }
 
   .content-header {

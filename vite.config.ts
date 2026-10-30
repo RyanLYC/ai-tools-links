@@ -1,27 +1,39 @@
 import { defineConfig } from "vite";
+import { fileURLToPath, URL } from "node:url";
 import vue from "@vitejs/plugin-vue";
+import vueDevTools from "vite-plugin-vue-devtools";
 
 export default defineConfig({
   base: "./",
-  plugins: [vue()],
+  // vueDevTools 仅在 dev 模式注入，构建产物不受影响
+  plugins: [vue(), vueDevTools()],
   resolve: {
     alias: {
-      "@": "/src",
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
   build: {
     target: "esnext",
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vue-vendor": ["vue", "pinia"],
-          dexie: ["dexie"],
+        // Vite 8 (Rolldown) 仅支持函数形式的 manualChunks
+        manualChunks(id: string) {
+          if (id.includes("node_modules")) {
+            if (id.includes("dexie")) return "dexie";
+            if (
+              id.includes("/vue/") ||
+              id.includes("@vue/") ||
+              id.includes("pinia")
+            ) {
+              return "vue-vendor";
+            }
+          }
         },
       },
     },
   },
   server: {
-    port: 8800,
+    port: 7080,
     open: true,
   },
   // 预览环境配置

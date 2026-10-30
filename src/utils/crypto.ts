@@ -9,56 +9,72 @@
  * @param salt - 盐值
  * @returns 派生的密钥
  */
-async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
-  const encoder = new TextEncoder()
-  const passwordBuffer = encoder.encode(password)
+async function deriveKey(
+  password: string,
+  salt: Uint8Array,
+): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const passwordBuffer = encoder.encode(password);
 
   // 导入密码作为密钥材料
   const baseKey = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     passwordBuffer,
-    'PBKDF2',
+    "PBKDF2",
     false,
-    ['deriveKey']
-  )
+    ["deriveKey"],
+  );
 
   // 派生 AES-GCM 密钥
   return crypto.subtle.deriveKey(
     {
-      name: 'PBKDF2',
+      name: "PBKDF2",
       salt: salt,
       iterations: 100000,
-      hash: 'SHA-256'
+      hash: "SHA-256",
     },
     baseKey,
-    { name: 'AES-GCM', length: 256 },
+    { name: "AES-GCM", length: 256 },
     false,
-    ['encrypt', 'decrypt']
-  )
+    ["encrypt", "decrypt"],
+  );
 }
+
+// 分块大小：避免 String.fromCharCode 参数过多导致栈溢出
+const BASE64_CHUNK_SIZE = 0x8000;
 
 /**
  * 将 ArrayBuffer 转换为 Base64 字符串
  */
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i])
+  const bytes = new Uint8Array(buffer);
+  const chunks: string[] = [];
+  for (let i = 0; i < bytes.length; i += BASE64_CHUNK_SIZE) {
+    chunks.push(
+      String.fromCharCode(...bytes.subarray(i, i + BASE64_CHUNK_SIZE)),
+    );
   }
-  return btoa(binary)
+  return btoa(chunks.join(""));
 }
 
 /**
  * 将 Base64 字符串转换为 ArrayBuffer
  */
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i)
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += BASE64_CHUNK_SIZE) {
+    bytes.set(
+      Uint8Array.from(
+        binary
+          .slice(i, i + BASE64_CHUNK_SIZE)
+          .split("")
+          .map((ch) => ch.charCodeAt(0)),
+      ),
+      i,
+    );
   }
-  return bytes.buffer
+  return bytes.buffer;
 }
 
 /**
@@ -67,41 +83,44 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
  * @param password - 加密密码
  * @returns 加密后的 JSON 字符串
  */
-export async function encrypt(data: unknown, password: string): Promise<string> {
+export async function encrypt(
+  data: unknown,
+  password: string,
+): Promise<string> {
   if (!password || password.length < 8) {
-    throw new Error('密码长度至少为8个字符')
+    throw new Error("密码长度至少为8个字符");
   }
 
   // 生成随机 IV（初始化向量）和盐值
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const salt = crypto.getRandomValues(new Uint8Array(16));
 
   // 派生密钥
-  const key = await deriveKey(password, salt)
+  const key = await deriveKey(password, salt);
 
   // 将数据编码为 JSON
-  const encoder = new TextEncoder()
-  const plaintext = encoder.encode(JSON.stringify(data))
+  const encoder = new TextEncoder();
+  const plaintext = encoder.encode(JSON.stringify(data));
 
   // 加密
   const ciphertext = await crypto.subtle.encrypt(
     {
-      name: 'AES-GCM',
-      iv: iv
+      name: "AES-GCM",
+      iv: iv,
     },
     key,
-    plaintext
-  )
+    plaintext,
+  );
 
   // 返回加密结果
   const result = {
-    version: '1.0',
+    version: "1.0",
     iv: arrayBufferToBase64(iv),
     salt: arrayBufferToBase64(salt),
-    ciphertext: arrayBufferToBase64(ciphertext)
-  }
+    ciphertext: arrayBufferToBase64(ciphertext),
+  };
 
-  return JSON.stringify(result)
+  return JSON.stringify(result);
 }
 
 /**
@@ -110,59 +129,67 @@ export async function encrypt(data: unknown, password: string): Promise<string> 
  * @param password - 解密密码
  * @returns 解密后的原始数据
  */
-export async function decrypt<T = unknown>(encryptedData: string, password: string): Promise<T> {
+export async function decrypt<T = unknown>(
+  encryptedData: string,
+  password: string,
+): Promise<T> {
   if (!password) {
-    throw new Error('请提供解密密码')
+    throw new Error("请提供解密密码");
   }
 
-  let parsed: unknown
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(encryptedData)
+    parsed = JSON.parse(encryptedData);
   } catch (e) {
-    throw new Error('加密数据格式无效')
+    throw new Error("加密数据格式无效");
   }
 
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('加密数据格式无效')
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("加密数据格式无效");
   }
 
-  const data = parsed as { version?: string; iv?: string; salt?: string; ciphertext?: string }
+  const data = parsed as {
+    version?: string;
+    iv?: string;
+    salt?: string;
+    ciphertext?: string;
+  };
 
-  if (data.version !== '1.0') {
-    throw new Error(`不支持的加密版本: ${data.version}`)
+  if (data.version !== "1.0") {
+    throw new Error(`不支持的加密版本: ${data.version}`);
   }
 
   if (!data.iv || !data.salt || !data.ciphertext) {
-    throw new Error('加密数据不完整')
+    throw new Error("加密数据不完整");
   }
 
   try {
     // 解析 IV、盐值和密文
-    const iv = base64ToArrayBuffer(data.iv)
-    const salt = base64ToArrayBuffer(data.salt)
-    const ciphertext = base64ToArrayBuffer(data.ciphertext)
+    const iv = base64ToArrayBuffer(data.iv);
+    const salt = base64ToArrayBuffer(data.salt);
+    const ciphertext = base64ToArrayBuffer(data.ciphertext);
 
     // 派生密钥
-    const key = await deriveKey(password, salt)
+    const key = await deriveKey(password, salt);
 
     // 解密
     const decrypted = await crypto.subtle.decrypt(
       {
-        name: 'AES-GCM',
-        iv: new Uint8Array(iv)
+        name: "AES-GCM",
+        iv: new Uint8Array(iv),
       },
       key,
-      ciphertext
-    )
+      ciphertext,
+    );
 
     // 解码为 JSON
-    const decoder = new TextDecoder()
-    const plaintext = decoder.decode(decrypted)
+    const decoder = new TextDecoder();
+    const plaintext = decoder.decode(decrypted);
 
-    return JSON.parse(plaintext) as T
+    return JSON.parse(plaintext) as T;
   } catch (e) {
-    throw new Error('解密失败，请检查密码是否正确')
+    throw new Error("解密失败，请检查密码是否正确");
   }
 }
 
-export default { encrypt, decrypt }
+export default { encrypt, decrypt };
